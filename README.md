@@ -15,44 +15,42 @@
   f add ~/code      # add root
   f index           # index projects
   f noro            # jump (fuzzy)
-  f code rust       # multi-term
-  f top             # top directories
+  f top             # browse top dirs (scrollable)
 
 > bookmarks?
 
   f mark work       # mark current dir
-  f mark docs ~/d   # mark specific path
   f work            # jump to bookmark
-  f marks           # list bookmarks
-  f unmark work     # remove bookmark
+  f marks           # list all
+  f unmark work     # remove
 
-> parent jump?
+> navigation?
 
-  fb                # jump to nearest .git parent
-  fb src            # jump to parent containing "src"
+  fb                # jump to .git parent
+  fb src            # jump to parent matching "src"
+
+> import?
+
+  f import zoxide   # import from zoxide
+  f import z        # import from z
 
 > keys?
 
-  j/k               # navigate
+  j/k or scroll     # navigate
   tab               # toggle scores
   enter             # select
   esc               # cancel
 
 > features?
 
-  ✓ nucleo fuzzy matching (6x faster)
+  ✓ nucleo fuzzy (6x faster)
   ✓ frecency ranking
   ✓ bookmarks
-  ✓ parent directory jump
-  ✓ bincode serialization
-  ✓ mimalloc allocator
-  ✓ shell completions
-
-> completions?
-
-  f completions bash >> ~/.bashrc
-  f completions zsh >> ~/.zshrc
-  f completions fish > ~/.config/fish/completions/f.fish
+  ✓ parent jump
+  ✓ import from zoxide/z
+  ✓ excludes current dir
+  ✓ mouse scroll
+  ✓ fish/bash/zsh
 
 > stack?
 

@@ -37,6 +37,7 @@ enum Commands {
     Marks,
     Back { query: Option<String> },
     Completions { shell: Shell },
+    Import { from: String, path: Option<String> },
 }
 
 fn main() {
@@ -55,6 +56,7 @@ fn main() {
         Some(Commands::Marks) => list_marks(),
         Some(Commands::Back { query }) => back(query.as_deref()),
         Some(Commands::Completions { shell }) => completions(shell),
+        Some(Commands::Import { from, path }) => import(&from, path.as_deref()),
         None => {
             if cli.query.is_empty() {
                 index::run()
@@ -82,11 +84,16 @@ fn jump(query: &str) -> Result<()> {
 
     let cache = index::load_cache()?;
     let store = frecency::load()?;
+    let cwd = std::env::current_dir().ok();
 
     let dirs: Vec<String> = cache
         .directories
         .into_iter()
-        .filter(|d| std::path::Path::new(d).exists())
+        .filter(|d| {
+            let exists = std::path::Path::new(d).exists();
+            let is_current = cwd.as_ref().map(|c| c.to_string_lossy() == *d).unwrap_or(false);
+            exists && !is_current
+        })
         .collect();
 
     if dirs.is_empty() {
@@ -156,12 +163,18 @@ fn top() -> Result<()> {
     let mut entries: Vec<_> = store
         .entries
         .iter()
-        .map(|(p, e)| (p, frecency::frecency(e)))
+        .filter(|(p, _)| std::path::Path::new(p).exists())
+        .map(|(p, e)| (p.clone(), frecency::frecency(e) as u32))
         .collect();
-    entries.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-    for (path, score) in entries.iter().take(10) {
-        let name = path.rsplit('/').next().unwrap_or(path);
-        eprintln!("{:>6.0}  {}", score, name);
+    entries.sort_by(|a, b| b.1.cmp(&a.1));
+
+    if entries.is_empty() {
+        return Ok(());
+    }
+
+    let limited: Vec<(String, u32)> = entries.into_iter().take(50).collect();
+    if let Some(path) = ui::browse(&limited) {
+        println!("{path}");
     }
     Ok(())
 }
@@ -205,4 +218,88 @@ fn completions(shell: Shell) -> Result<()> {
     let mut cmd = Cli::command();
     generate(shell, &mut cmd, "f", &mut io::stdout());
     Ok(())
+}
+
+fn import(from: &str, path: Option<&str>) -> Result<()> {
+    let mut store = frecency::load()?;
+    let count = match from {
+        "zoxide" => import_zoxide(&mut store, path)?,
+        "z" => import_z(&mut store, path)?,
+        _ => {
+            eprintln!("supported: zoxide, z");
+            return Ok(());
+        }
+    };
+    frecency::save(&store)?;
+    eprintln!("{count}");
+    Ok(())
+}
+
+fn import_zoxide(store: &mut frecency::Store, path: Option<&str>) -> Result<usize> {
+    let db_path = match path {
+        Some(p) => std::path::PathBuf::from(shellexpand::tilde(p).to_string()),
+        None => dirs::data_dir()
+            .unwrap_or_default()
+            .join("zoxide")
+            .join("db.zo"),
+    };
+
+    if !db_path.exists() {
+        return Ok(0);
+    }
+
+    let content = std::fs::read_to_string(&db_path)?;
+    let mut count = 0;
+
+    for line in content.lines() {
+        let parts: Vec<&str> = line.split('|').collect();
+        if parts.len() >= 2 {
+            let path = parts[0];
+            let score: f64 = parts[1].parse().unwrap_or(1.0);
+            if std::path::Path::new(path).exists() {
+                store.entries.insert(
+                    path.to_string(),
+                    frecency::Entry {
+                        score,
+                        last: frecency::now(),
+                    },
+                );
+                count += 1;
+            }
+        }
+    }
+    Ok(count)
+}
+
+fn import_z(store: &mut frecency::Store, path: Option<&str>) -> Result<usize> {
+    let z_path = match path {
+        Some(p) => std::path::PathBuf::from(shellexpand::tilde(p).to_string()),
+        None => dirs::home_dir().unwrap_or_default().join(".z"),
+    };
+
+    if !z_path.exists() {
+        return Ok(0);
+    }
+
+    let content = std::fs::read_to_string(&z_path)?;
+    let mut count = 0;
+
+    for line in content.lines() {
+        let parts: Vec<&str> = line.split('|').collect();
+        if parts.len() >= 2 {
+            let path = parts[0];
+            let score: f64 = parts[1].parse().unwrap_or(1.0);
+            if std::path::Path::new(path).exists() {
+                store.entries.insert(
+                    path.to_string(),
+                    frecency::Entry {
+                        score,
+                        last: frecency::now(),
+                    },
+                );
+                count += 1;
+            }
+        }
+    }
+    Ok(count)
 }

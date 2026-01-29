@@ -51,6 +51,21 @@ function fb() {
   [ -n "$dir" ] && cd "$dir"
 }'
 
+FISH_HOOK='
+function f
+  set -l dir ("$HOME/.local/bin/f" $argv)
+  if test -n "$dir"
+    cd "$dir"
+    "$HOME/.local/bin/f" boost "$dir" 2>/dev/null
+  end
+end
+function fb
+  set -l dir ("$HOME/.local/bin/f" back $argv)
+  if test -n "$dir"
+    cd "$dir"
+  end
+end'
+
 add_to_shell() {
   [ -f "$1" ] || return 0
   grep -v '\.local/bin/f' "$1" > "$1.tmp" 2>/dev/null || true
@@ -61,12 +76,20 @@ add_to_shell() {
 add_to_shell "$HOME/.zshrc" "$ZSH_HOOK"
 add_to_shell "$HOME/.bashrc" "$BASH_HOOK"
 
+mkdir -p "$HOME/.config/fish/functions"
+echo "$FISH_HOOK" > "$HOME/.config/fish/functions/f.fish"
+
 if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
   for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
     if [ -f "$rc" ] && ! grep -q 'export PATH=.*\.local/bin' "$rc"; then
       echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$rc"
     fi
   done
+  if [ -f "$HOME/.config/fish/config.fish" ]; then
+    if ! grep -q '\.local/bin' "$HOME/.config/fish/config.fish"; then
+      echo 'fish_add_path "$HOME/.local/bin"' >> "$HOME/.config/fish/config.fish"
+    fi
+  fi
 fi
 
 echo "done"
