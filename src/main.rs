@@ -26,6 +26,7 @@ enum Commands {
     Remove { path: String },
     Boost { path: String },
     Prune,
+    Top,
 }
 
 fn main() {
@@ -38,6 +39,7 @@ fn main() {
         Some(Commands::Remove { path }) => config::remove_root(&path),
         Some(Commands::Boost { path }) => boost(&path),
         Some(Commands::Prune) => prune(),
+        Some(Commands::Top) => top(),
         None => {
             if cli.query.is_empty() {
                 index::run()
@@ -76,10 +78,12 @@ fn jump(query: &str) -> Result<()> {
         return Ok(());
     }
 
-    let path = if matches.len() == 1 {
-        Some(matches[0].clone())
+    let limited: Vec<String> = matches.into_iter().take(20).collect();
+
+    let path = if limited.len() == 1 {
+        Some(limited[0].clone())
     } else {
-        ui::select(&matches)
+        ui::select(&limited)
     };
 
     if let Some(p) = path {
@@ -103,6 +107,21 @@ fn prune() -> Result<()> {
     let after = store.entries.len();
     frecency::save(&store)?;
     eprintln!("pruned {} entries", before - after);
+    Ok(())
+}
+
+fn top() -> Result<()> {
+    let store = frecency::load()?;
+    let mut entries: Vec<_> = store
+        .entries
+        .iter()
+        .map(|(p, e)| (p, frecency::frecency(e)))
+        .collect();
+    entries.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    for (path, score) in entries.iter().take(10) {
+        let name = path.rsplit('/').next().unwrap_or(path);
+        eprintln!("{:>6.0}  {}", score, name);
+    }
     Ok(())
 }
 

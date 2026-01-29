@@ -16,6 +16,7 @@
   f index           # index projects
   f noro            # jump
   f code rust       # multi-term search
+  f top             # show top directories
 
 > features?
 
