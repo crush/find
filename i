@@ -27,13 +27,15 @@ mkdir -p "$DIR"
 curl -fsSL "$URL" -o "${DIR}/f"
 chmod +x "${DIR}/f"
 
-SHELL_FUNC='function f() { local dir; dir=$("$HOME/.local/bin/f" "$@"); [ -n "$dir" ] && cd "$dir"; }'
+SHELL_FUNC='function f() { local dir; dir=$("$HOME/.local/bin/f" "$@"); [ -n "$dir" ] && cd "$dir" && "$HOME/.local/bin/f" boost "$dir" 2>/dev/null; }'
 
 add_to_shell() {
   if [ -f "$1" ]; then
     if ! grep -q '/.local/bin/f' "$1" 2>/dev/null; then
       echo "" >> "$1"
       echo "$SHELL_FUNC" >> "$1"
+    else
+      sed -i.bak 's|function f().*|'"$SHELL_FUNC"'|' "$1" && rm -f "$1.bak"
     fi
   fi
 }

@@ -1,7 +1,7 @@
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │   / find                                                     │
-│   instant directory jumper                                   │
+│   instant directory jumper with frecency                     │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -15,6 +15,14 @@
   f add ~/code      # add root
   f index           # index projects
   f noro            # jump
+  f code rust       # multi-term search
+
+> features?
+
+  ✓ frecency ranking (frequency + recency)
+  ✓ multi-term search (f fo ba → /foo/bar)
+  ✓ auto-prune dead paths
+  ✓ learns from usage
 
 > keys?
 
@@ -22,6 +30,16 @@
   tab               # toggle path
   enter             # select
   esc/ctrl+c        # cancel
+
+> frecency?
+
+  score starts at 1, +1 per visit
+
+  multiplier based on recency:
+    last hour  → score × 4
+    last day   → score × 2
+    last week  → score ÷ 2
+    older      → score ÷ 4
 
 > stack?
 
