@@ -1,41 +1,27 @@
-use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
-use nucleo_matcher::{Config, Matcher};
-
-const MIN_SCORE: u32 = 50;
-
 pub fn find(directories: &[String], query: &str) -> Vec<String> {
-    let mut matcher = Matcher::new(Config::DEFAULT.match_paths());
-    let pattern = Pattern::parse(query, CaseMatching::Ignore, Normalization::Smart);
     let query_lower = query.to_lowercase();
 
-    let mut scored: Vec<(u32, &String)> = directories
-        .iter()
-        .filter_map(|dir| {
-            let name = dir.rsplit('/').next().unwrap_or(dir);
-            let name_lower = name.to_lowercase();
+    let mut exact: Vec<&String> = Vec::new();
+    let mut prefix: Vec<&String> = Vec::new();
+    let mut contains: Vec<&String> = Vec::new();
 
-            if name_lower == query_lower {
-                return Some((u32::MAX, dir));
-            }
+    for dir in directories {
+        let name = dir.rsplit('/').next().unwrap_or(dir);
+        let name_lower = name.to_lowercase();
 
-            if name_lower.starts_with(&query_lower) {
-                return Some((u32::MAX - 1, dir));
-            }
+        if name_lower == query_lower {
+            exact.push(dir);
+        } else if name_lower.starts_with(&query_lower) {
+            prefix.push(dir);
+        } else if name_lower.contains(&query_lower) {
+            contains.push(dir);
+        }
+    }
 
-            if name_lower.contains(&query_lower) {
-                return Some((u32::MAX - 2, dir));
-            }
-
-            let mut buf = Vec::new();
-            let haystack = nucleo_matcher::Utf32Str::new(name, &mut buf);
-            pattern
-                .score(haystack, &mut matcher)
-                .filter(|&score| score >= MIN_SCORE)
-                .map(|score| (score, dir))
-        })
-        .collect();
-
-    scored.sort_by(|a, b| b.0.cmp(&a.0));
-
-    scored.into_iter().map(|(_, dir)| dir.clone()).collect()
+    exact
+        .into_iter()
+        .chain(prefix)
+        .chain(contains)
+        .cloned()
+        .collect()
 }
