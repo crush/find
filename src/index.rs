@@ -67,13 +67,13 @@ pub fn run() -> Result<()> {
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_else(|| ".".to_string());
 
-        println!("no roots configured. add one with:");
-        println!("  f add {home}");
-        println!("  f add {home}/code");
+        eprintln!("no roots configured. add one with:");
+        eprintln!("  f add {home}");
+        eprintln!("  f add {home}/code");
         return Ok(());
     }
 
-    println!("indexing...");
+    eprintln!("indexing...");
 
     let directories: Vec<String> = config
         .roots
@@ -85,7 +85,7 @@ pub fn run() -> Result<()> {
     let count = cache.directories.len();
     save_cache(&cache)?;
 
-    println!("indexed {count} directories");
+    eprintln!("indexed {count} directories");
     Ok(())
 }
 

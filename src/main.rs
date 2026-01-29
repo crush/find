@@ -76,7 +76,7 @@ fn jump(query: &str) -> Result<()> {
 fn list_roots() -> Result<()> {
     let config = config::load()?;
     for root in &config.roots {
-        println!("{root}");
+        eprintln!("{root}");
     }
     Ok(())
 }

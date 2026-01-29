@@ -48,9 +48,9 @@ pub fn add_root(path: &str) -> Result<()> {
     if !config.roots.contains(&expanded) {
         config.roots.push(expanded.clone());
         save(&config)?;
-        println!("added: {expanded}");
+        eprintln!("added: {expanded}");
     } else {
-        println!("already exists: {expanded}");
+        eprintln!("already exists: {expanded}");
     }
 
     Ok(())
@@ -63,9 +63,9 @@ pub fn remove_root(path: &str) -> Result<()> {
     if let Some(pos) = config.roots.iter().position(|x| x == &expanded) {
         config.roots.remove(pos);
         save(&config)?;
-        println!("removed: {expanded}");
+        eprintln!("removed: {expanded}");
     } else {
-        println!("not found: {expanded}");
+        eprintln!("not found: {expanded}");
     }
 
     Ok(())
