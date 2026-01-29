@@ -6,6 +6,23 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 
+const IGNORED: &[&str] = &[
+    "node_modules",
+    "target",
+    "dist",
+    "build",
+    "vendor",
+    "__pycache__",
+    ".git",
+    ".next",
+    ".turbo",
+    ".cache",
+    ".npm",
+    ".pnpm",
+    "coverage",
+    ".nyc_output",
+];
+
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Cache {
     pub directories: Vec<String>,
@@ -76,17 +93,22 @@ fn scan(root: &str) -> Vec<String> {
     let mut dirs = Vec::new();
 
     for entry in WalkDir::new(root)
-        .max_depth(4)
+        .max_depth(5)
         .skip_hidden(true)
+        .process_read_dir(|_, _, _, children| {
+            children.retain(|e| {
+                e.as_ref()
+                    .map(|entry| {
+                        let name = entry.file_name().to_str().unwrap_or("");
+                        !IGNORED.contains(&name)
+                    })
+                    .unwrap_or(false)
+            });
+        })
         .into_iter()
         .filter_map(|e| e.ok())
     {
         if !entry.file_type().is_dir() {
-            continue;
-        }
-
-        let name = entry.file_name().to_str().unwrap_or("");
-        if is_ignored(name) {
             continue;
         }
 
@@ -97,13 +119,6 @@ fn scan(root: &str) -> Vec<String> {
     }
 
     dirs
-}
-
-fn is_ignored(name: &str) -> bool {
-    matches!(
-        name,
-        "node_modules" | "target" | "dist" | "build" | "vendor" | "__pycache__" | ".git"
-    )
 }
 
 fn is_project(path: &std::path::Path) -> bool {
