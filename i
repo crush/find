@@ -27,5 +27,26 @@ mkdir -p "$DIR"
 curl -fsSL "$URL" -o "${DIR}/f"
 chmod +x "${DIR}/f"
 
-echo "installed to ${DIR}/f"
-echo "add to path: export PATH=\"\$HOME/.local/bin:\$PATH\""
+SHELL_FUNC='function f() { local dir; dir=$("$HOME/.local/bin/f" "$@"); [ -n "$dir" ] && cd "$dir"; }'
+
+add_to_shell() {
+  if [ -f "$1" ]; then
+    if ! grep -q '/.local/bin/f' "$1" 2>/dev/null; then
+      echo "" >> "$1"
+      echo "$SHELL_FUNC" >> "$1"
+    fi
+  fi
+}
+
+add_to_shell "$HOME/.zshrc"
+add_to_shell "$HOME/.bashrc"
+
+if ! echo "$PATH" | grep -q "$HOME/.local/bin"; then
+  for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
+    if [ -f "$rc" ] && ! grep -q 'export PATH=.*\.local/bin' "$rc"; then
+      echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$rc"
+    fi
+  done
+fi
+
+echo "done. restart shell or: source ~/.zshrc"

@@ -1,6 +1,8 @@
 use nucleo_matcher::pattern::{CaseMatching, Normalization, Pattern};
 use nucleo_matcher::{Config, Matcher};
 
+const MIN_SCORE: u32 = 50;
+
 pub fn find(directories: &[String], query: &str) -> Vec<String> {
     let mut matcher = Matcher::new(Config::DEFAULT.match_paths());
     let pattern = Pattern::parse(query, CaseMatching::Ignore, Normalization::Smart);
@@ -20,9 +22,16 @@ pub fn find(directories: &[String], query: &str) -> Vec<String> {
                 return Some((u32::MAX - 1, dir));
             }
 
+            if name_lower.contains(&query_lower) {
+                return Some((u32::MAX - 2, dir));
+            }
+
             let mut buf = Vec::new();
             let haystack = nucleo_matcher::Utf32Str::new(name, &mut buf);
-            pattern.score(haystack, &mut matcher).map(|score| (score, dir))
+            pattern
+                .score(haystack, &mut matcher)
+                .filter(|&score| score >= MIN_SCORE)
+                .map(|score| (score, dir))
         })
         .collect();
 
