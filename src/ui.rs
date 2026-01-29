@@ -1,4 +1,4 @@
-use crossterm::cursor::{MoveToColumn, MoveUp};
+use crossterm::cursor::{Hide, MoveToColumn, MoveUp, Show};
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use crossterm::terminal::{self, Clear, ClearType};
 use crossterm::QueueableCommand;
@@ -11,6 +11,8 @@ pub fn select(paths: &[String]) -> Option<String> {
     let mut err = stderr();
 
     let _ = terminal::enable_raw_mode();
+    let _ = err.queue(Hide);
+    let _ = err.flush();
 
     print_list(&mut err, paths, selected, show_path);
 
@@ -39,6 +41,8 @@ pub fn select(paths: &[String]) -> Option<String> {
     };
 
     clear_list(&mut err, len);
+    let _ = err.queue(Show);
+    let _ = err.flush();
     let _ = terminal::disable_raw_mode();
     result
 }
