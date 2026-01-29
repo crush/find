@@ -24,6 +24,7 @@ pub fn select(paths: &[String]) -> Option<String> {
             match key.code {
                 KeyCode::Enter => break Some(paths[selected].clone()),
                 KeyCode::Esc | KeyCode::Char('q') => break None,
+                KeyCode::Char('c') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => break None,
                 KeyCode::Up | KeyCode::Char('k') => {
                     selected = selected.saturating_sub(1);
                 }

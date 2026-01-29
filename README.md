@@ -12,22 +12,18 @@
 
 > usage?
 
-  f add ~/code      # add root directory
+  f add ~/code      # add root
   f index           # index projects
-  f noro            # jump to noro
+  f noro            # jump
 
-> how it works?
+> keys?
 
-  f <query>         # exact match = instant jump
-                    # multiple matches = minimal picker
-
-> ui?
-
-  > noro            # clean folder names
-    api             # no ugly paths
-    web             # just names
+  j/k or arrows     # navigate
+  tab               # toggle path
+  enter             # select
+  esc/ctrl+c        # cancel
 
 > stack?
 
-  rust · nucleo · inquire · jwalk
+  rust · crossterm · jwalk
 ```
