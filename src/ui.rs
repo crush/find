@@ -1,39 +1,88 @@
-use inquire::ui::{Color, IndexPrefix, RenderConfig, StyleSheet, Styled};
-use inquire::Select;
-
-fn format_paths(paths: &[String]) -> Vec<String> {
-    paths
-        .iter()
-        .map(|path| path.rsplit('/').next().unwrap_or(path).to_string())
-        .collect()
-}
-
-fn config() -> RenderConfig<'static> {
-    RenderConfig {
-        prompt: StyleSheet::new(),
-        highlighted_option_prefix: Styled::new(">").with_fg(Color::LightCyan),
-        option_index_prefix: IndexPrefix::None,
-        scroll_up_prefix: Styled::new(""),
-        scroll_down_prefix: Styled::new(""),
-        ..RenderConfig::empty()
-    }
-}
+use crossterm::cursor::{Hide, MoveToColumn, MoveUp, Show};
+use crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use crossterm::style::Print;
+use crossterm::terminal::{self, Clear, ClearType};
+use crossterm::ExecutableCommand;
+use std::io::{stdout, Write};
 
 pub fn select(paths: &[String]) -> Option<String> {
-    let display = format_paths(paths);
-    let display_refs: Vec<&str> = display.iter().map(|s| s.as_str()).collect();
+    let mut selected = 0;
+    let mut show_path = false;
+    let len = paths.len();
 
-    let result = Select::new("", display_refs)
-        .with_page_size(10)
-        .with_render_config(config())
-        .without_help_message()
-        .raw_prompt();
+    terminal::enable_raw_mode().ok()?;
+    stdout().execute(Hide).ok()?;
 
-    match result {
-        Ok(selection) => {
-            let selected_idx = display.iter().position(|d| d == selection.value).unwrap_or(0);
-            Some(paths[selected_idx].clone())
+    draw(paths, selected, show_path);
+
+    loop {
+        if let Event::Key(key) = event::read().ok()? {
+            if key.kind != KeyEventKind::Press {
+                continue;
+            }
+            match key.code {
+                KeyCode::Enter => {
+                    cleanup(len);
+                    return Some(paths[selected].clone());
+                }
+                KeyCode::Esc | KeyCode::Char('q') => {
+                    cleanup(len);
+                    return None;
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    selected = selected.saturating_sub(1);
+                    redraw(paths, selected, show_path, len);
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    selected = (selected + 1).min(len - 1);
+                    redraw(paths, selected, show_path, len);
+                }
+                KeyCode::Tab => {
+                    show_path = !show_path;
+                    redraw(paths, selected, show_path, len);
+                }
+                _ => {}
+            }
         }
-        Err(_) => None,
     }
+}
+
+fn draw(paths: &[String], selected: usize, show_path: bool) {
+    let mut out = stdout();
+    for (i, path) in paths.iter().enumerate() {
+        let name = path.rsplit('/').next().unwrap_or(path);
+        let prefix = if i == selected { "> " } else { "  " };
+        if show_path {
+            let _ = out.execute(Print(format!("{}{}\x1b[90m  {}\x1b[0m\n", prefix, name, path)));
+        } else {
+            let _ = out.execute(Print(format!("{}{}\n", prefix, name)));
+        }
+    }
+    let _ = out.flush();
+}
+
+fn redraw(paths: &[String], selected: usize, show_path: bool, len: usize) {
+    let mut out = stdout();
+    let _ = out.execute(MoveUp(len as u16));
+    let _ = out.execute(MoveToColumn(0));
+    for _ in 0..len {
+        let _ = out.execute(Clear(ClearType::CurrentLine));
+        let _ = out.execute(Print("\n"));
+    }
+    let _ = out.execute(MoveUp(len as u16));
+    draw(paths, selected, show_path);
+}
+
+fn cleanup(len: usize) {
+    let mut out = stdout();
+    let _ = out.execute(MoveUp(len as u16));
+    let _ = out.execute(MoveToColumn(0));
+    for _ in 0..len {
+        let _ = out.execute(Clear(ClearType::CurrentLine));
+        let _ = out.execute(Print("\n"));
+    }
+    let _ = out.execute(MoveUp(len as u16));
+    let _ = out.execute(Clear(ClearType::CurrentLine));
+    let _ = out.execute(Show);
+    let _ = terminal::disable_raw_mode();
 }

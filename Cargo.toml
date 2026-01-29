@@ -13,8 +13,8 @@ path = "src/main.rs"
 [dependencies]
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
+crossterm = "0.28"
 dirs = "6"
-inquire = "0.7"
 jwalk = "0.8"
 rayon = "1"
 serde = { version = "1", features = ["derive"] }
