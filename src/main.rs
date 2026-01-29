@@ -64,12 +64,14 @@ fn jump(query: &str) -> Result<()> {
     }
 
     let path = if matches.len() == 1 {
-        matches[0].clone()
+        Some(matches[0].clone())
     } else {
-        ui::select(&matches)?
+        ui::select(&matches)
     };
 
-    println!("{path}");
+    if let Some(p) = path {
+        println!("{p}");
+    }
     Ok(())
 }
 
