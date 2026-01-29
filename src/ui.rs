@@ -53,9 +53,9 @@ fn draw(paths: &[String], selected: usize, show_path: bool) {
         let name = path.rsplit('/').next().unwrap_or(path);
         let prefix = if i == selected { "> " } else { "  " };
         if show_path {
-            let _ = out.execute(Print(format!("{}{}\x1b[90m  {}\x1b[0m\n", prefix, name, path)));
+            let _ = out.execute(Print(format!("{}{}\x1b[90m  {}\x1b[0m\r\n", prefix, name, path)));
         } else {
-            let _ = out.execute(Print(format!("{}{}\n", prefix, name)));
+            let _ = out.execute(Print(format!("{}{}\r\n", prefix, name)));
         }
     }
     let _ = out.flush();
@@ -67,7 +67,7 @@ fn redraw(paths: &[String], selected: usize, show_path: bool, len: usize) {
     let _ = out.execute(MoveToColumn(0));
     for _ in 0..len {
         let _ = out.execute(Clear(ClearType::CurrentLine));
-        let _ = out.execute(Print("\n"));
+        let _ = out.execute(Print("\r\n"));
     }
     let _ = out.execute(MoveUp(len as u16));
     draw(paths, selected, show_path);
@@ -79,7 +79,7 @@ fn cleanup(len: usize) {
     let _ = out.execute(MoveToColumn(0));
     for _ in 0..len {
         let _ = out.execute(Clear(ClearType::CurrentLine));
-        let _ = out.execute(Print("\n"));
+        let _ = out.execute(Print("\r\n"));
     }
     let _ = out.execute(MoveUp(len as u16));
     let _ = out.execute(Clear(ClearType::CurrentLine));
