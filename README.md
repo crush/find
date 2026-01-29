@@ -6,65 +6,28 @@
 ```
 
 ```bash
-> what is this?
-
-  a fast directory jumper that indexes your projects
-  no cd history needed - knows your folders instantly
-
-> features?
-
-  ✓ instant project detection (git, cargo, npm, etc)
-  ✓ fuzzy search with smart ranking
-  ✓ interactive selection when multiple matches
-  ✓ parallel indexing with rayon
-  ✓ zero warmup time
-
-> usage?
-
-  # add directories to index
-  f add ~/code
-  f add ~/projects
-
-  # index your directories
-  f index
-
-  # jump to a project
-  f noro          # jumps if unique match
-  f proj          # shows picker if multiple matches
-
 > install?
 
   curl -fsSL raw.githubusercontent.com/crush/find/main/i | sh
 
-> update?
+> usage?
 
-  # same command
-  curl -fsSL raw.githubusercontent.com/crush/find/main/i | sh
+  f add ~/code      # add root directory
+  f index           # index projects
+  f noro            # jump to noro
 
-> shell integration?
+> how it works?
 
-  # bash/zsh - add to ~/.bashrc or ~/.zshrc
-  function j() {
-    local dir
-    dir=$(f "$@")
-    if [ -n "$dir" ]; then
-      cd "$dir"
-    fi
-  }
+  f <query>         # exact match = instant jump
+                    # multiple matches = minimal picker
 
-  # fish - add to ~/.config/fish/config.fish
-  function j
-    set dir (f $argv)
-    if test -n "$dir"
-      cd $dir
-    end
-  end
+> ui?
+
+  > noro            # clean folder names
+    api             # no ugly paths
+    web             # just names
 
 > stack?
 
-  rust · clap · nucleo · inquire · jwalk · rayon
-
-> visit?
-
-  https://github.com/crush/find
+  rust · nucleo · inquire · jwalk
 ```

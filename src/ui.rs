@@ -1,31 +1,49 @@
 use anyhow::Result;
-use inquire::ui::{Attributes, RenderConfig, StyleSheet, Styled};
+use inquire::ui::{Color, IndexPrefix, RenderConfig, StyleSheet, Styled};
 use inquire::Select;
+use std::collections::HashMap;
 
-fn short(path: &str) -> String {
-    let parts: Vec<&str> = path.split('/').collect();
-    if parts.len() <= 3 {
-        return path.to_string();
+fn format_paths(paths: &[String]) -> Vec<String> {
+    let mut names: HashMap<&str, usize> = HashMap::new();
+
+    for path in paths {
+        let name = path.rsplit('/').next().unwrap_or(path);
+        *names.entry(name).or_insert(0) += 1;
     }
-    format!(".../{}", parts[parts.len() - 3..].join("/"))
+
+    paths
+        .iter()
+        .map(|path| {
+            let parts: Vec<&str> = path.split('/').collect();
+            let name = parts.last().unwrap_or(&"");
+
+            if names.get(name).copied().unwrap_or(0) > 1 && parts.len() >= 2 {
+                let parent = parts[parts.len() - 2];
+                format!("{} \x1b[2m{}\x1b[0m", name, parent)
+            } else {
+                name.to_string()
+            }
+        })
+        .collect()
 }
 
 fn config() -> RenderConfig<'static> {
     RenderConfig {
-        prompt: StyleSheet::new().with_attr(Attributes::BOLD),
-        highlighted_option_prefix: Styled::new(">"),
-        scroll_up_prefix: Styled::new("^"),
-        scroll_down_prefix: Styled::new("v"),
-        ..RenderConfig::default_colored()
+        prompt: StyleSheet::new(),
+        highlighted_option_prefix: Styled::new(">").with_fg(Color::LightCyan),
+        option_index_prefix: IndexPrefix::None,
+        scroll_up_prefix: Styled::new(""),
+        scroll_down_prefix: Styled::new(""),
+        ..RenderConfig::empty()
     }
 }
 
 pub fn select(paths: &[String]) -> Result<String> {
-    let display: Vec<String> = paths.iter().map(|p| short(p)).collect();
+    let display = format_paths(paths);
     let display_refs: Vec<&str> = display.iter().map(|s| s.as_str()).collect();
 
     let idx = Select::new("", display_refs)
-        .with_page_size(8)
+        .with_page_size(10)
         .with_render_config(config())
         .without_help_message()
         .prompt()?;
