@@ -34,7 +34,12 @@
 
 > install?
 
-  cargo install f
+  curl -fsSL raw.githubusercontent.com/crush/find/main/i | sh
+
+> update?
+
+  # same command
+  curl -fsSL raw.githubusercontent.com/crush/find/main/i | sh
 
 > shell integration?
 
