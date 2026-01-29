@@ -14,35 +14,47 @@
 
   f add ~/code      # add root
   f index           # index projects
-  f noro            # jump
-  f code rust       # multi-term search
-  f top             # show top directories
+  f noro            # jump (fuzzy)
+  f code rust       # multi-term
+  f top             # top directories
 
-> features?
+> bookmarks?
 
-  ✓ frecency ranking (frequency + recency)
-  ✓ multi-term search (f fo ba → /foo/bar)
-  ✓ auto-prune dead paths
-  ✓ learns from usage
+  f mark work       # mark current dir
+  f mark docs ~/d   # mark specific path
+  f work            # jump to bookmark
+  f marks           # list bookmarks
+  f unmark work     # remove bookmark
+
+> parent jump?
+
+  fb                # jump to nearest .git parent
+  fb src            # jump to parent containing "src"
 
 > keys?
 
-  j/k or arrows     # navigate
-  tab               # toggle path
+  j/k               # navigate
+  tab               # toggle scores
   enter             # select
-  esc/ctrl+c        # cancel
+  esc               # cancel
 
-> frecency?
+> features?
 
-  score starts at 1, +1 per visit
+  ✓ nucleo fuzzy matching (6x faster)
+  ✓ frecency ranking
+  ✓ bookmarks
+  ✓ parent directory jump
+  ✓ bincode serialization
+  ✓ mimalloc allocator
+  ✓ shell completions
 
-  multiplier based on recency:
-    last hour  → score × 4
-    last day   → score × 2
-    last week  → score ÷ 2
-    older      → score ÷ 4
+> completions?
+
+  f completions bash >> ~/.bashrc
+  f completions zsh >> ~/.zshrc
+  f completions fish > ~/.config/fish/completions/f.fish
 
 > stack?
 
-  rust · crossterm · jwalk
+  rust · nucleo · crossterm · ignore
 ```

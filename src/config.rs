@@ -1,11 +1,15 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Config {
+    #[serde(default)]
     pub roots: Vec<String>,
+    #[serde(default)]
+    pub marks: HashMap<String, String>,
 }
 
 pub fn path() -> PathBuf {
@@ -48,9 +52,7 @@ pub fn add_root(path: &str) -> Result<()> {
     if !config.roots.contains(&expanded) {
         config.roots.push(expanded.clone());
         save(&config)?;
-        eprintln!("added: {expanded}");
-    } else {
-        eprintln!("already exists: {expanded}");
+        eprintln!("{expanded}");
     }
 
     Ok(())
@@ -63,9 +65,6 @@ pub fn remove_root(path: &str) -> Result<()> {
     if let Some(pos) = config.roots.iter().position(|x| x == &expanded) {
         config.roots.remove(pos);
         save(&config)?;
-        eprintln!("removed: {expanded}");
-    } else {
-        eprintln!("not found: {expanded}");
     }
 
     Ok(())

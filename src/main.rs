@@ -5,8 +5,13 @@ mod search;
 mod ui;
 
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
+use clap_complete::{generate, Shell};
+use std::io;
 use std::process;
+
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[derive(Parser)]
 #[command(name = "f", about = "instant directory jumper")]
@@ -27,6 +32,11 @@ enum Commands {
     Boost { path: String },
     Prune,
     Top,
+    Mark { name: String, path: Option<String> },
+    Unmark { name: String },
+    Marks,
+    Back { query: Option<String> },
+    Completions { shell: Shell },
 }
 
 fn main() {
@@ -40,6 +50,11 @@ fn main() {
         Some(Commands::Boost { path }) => boost(&path),
         Some(Commands::Prune) => prune(),
         Some(Commands::Top) => top(),
+        Some(Commands::Mark { name, path }) => mark(&name, path.as_deref()),
+        Some(Commands::Unmark { name }) => unmark(&name),
+        Some(Commands::Marks) => list_marks(),
+        Some(Commands::Back { query }) => back(query.as_deref()),
+        Some(Commands::Completions { shell }) => completions(shell),
         None => {
             if cli.query.is_empty() {
                 index::run()
@@ -56,10 +71,17 @@ fn main() {
 }
 
 fn jump(query: &str) -> Result<()> {
-    let cache = index::load_cache()?;
-    let mut store = frecency::load()?;
+    let cfg = config::load()?;
 
-    frecency::prune(&mut store);
+    if let Some(path) = cfg.marks.get(query) {
+        if std::path::Path::new(path).exists() {
+            println!("{path}");
+            return Ok(());
+        }
+    }
+
+    let cache = index::load_cache()?;
+    let store = frecency::load()?;
 
     let dirs: Vec<String> = cache
         .directories
@@ -68,7 +90,6 @@ fn jump(query: &str) -> Result<()> {
         .collect();
 
     if dirs.is_empty() {
-        eprintln!("no directories indexed");
         return Ok(());
     }
 
@@ -78,16 +99,36 @@ fn jump(query: &str) -> Result<()> {
         return Ok(());
     }
 
-    let limited: Vec<String> = matches.into_iter().take(20).collect();
+    let limited: Vec<(String, u32)> = matches.into_iter().take(20).collect();
 
     let path = if limited.len() == 1 {
-        Some(limited[0].clone())
+        Some(limited[0].0.clone())
     } else {
         ui::select(&limited)
     };
 
     if let Some(p) = path {
         println!("{p}");
+    }
+    Ok(())
+}
+
+fn back(query: Option<&str>) -> Result<()> {
+    let cwd = std::env::current_dir()?;
+    let mut current = cwd.as_path();
+
+    while let Some(parent) = current.parent() {
+        if let Some(q) = query {
+            let name = parent.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            if name.to_lowercase().contains(&q.to_lowercase()) {
+                println!("{}", parent.display());
+                return Ok(());
+            }
+        } else if parent.join(".git").exists() {
+            println!("{}", parent.display());
+            return Ok(());
+        }
+        current = parent;
     }
     Ok(())
 }
@@ -106,7 +147,7 @@ fn prune() -> Result<()> {
     frecency::prune(&mut store);
     let after = store.entries.len();
     frecency::save(&store)?;
-    eprintln!("pruned {} entries", before - after);
+    eprintln!("{}", before - after);
     Ok(())
 }
 
@@ -125,10 +166,43 @@ fn top() -> Result<()> {
     Ok(())
 }
 
+fn mark(name: &str, path: Option<&str>) -> Result<()> {
+    let mut cfg = config::load()?;
+    let target = match path {
+        Some(p) => shellexpand::tilde(p).to_string(),
+        None => std::env::current_dir()?.to_string_lossy().to_string(),
+    };
+    cfg.marks.insert(name.to_string(), target.clone());
+    config::save(&cfg)?;
+    eprintln!("{name} -> {target}");
+    Ok(())
+}
+
+fn unmark(name: &str) -> Result<()> {
+    let mut cfg = config::load()?;
+    cfg.marks.remove(name);
+    config::save(&cfg)?;
+    Ok(())
+}
+
+fn list_marks() -> Result<()> {
+    let cfg = config::load()?;
+    for (name, path) in &cfg.marks {
+        eprintln!("{name} -> {path}");
+    }
+    Ok(())
+}
+
 fn list_roots() -> Result<()> {
-    let config = config::load()?;
-    for root in &config.roots {
+    let cfg = config::load()?;
+    for root in &cfg.roots {
         eprintln!("{root}");
     }
+    Ok(())
+}
+
+fn completions(shell: Shell) -> Result<()> {
+    let mut cmd = Cli::command();
+    generate(shell, &mut cmd, "f", &mut io::stdout());
     Ok(())
 }

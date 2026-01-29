@@ -25,7 +25,7 @@ pub fn path() -> PathBuf {
     dirs::data_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("f")
-        .join("frecency.json")
+        .join("db")
 }
 
 pub fn load() -> Result<Store> {
@@ -33,8 +33,8 @@ pub fn load() -> Result<Store> {
     if !p.exists() {
         return Ok(Store::default());
     }
-    let content = fs::read_to_string(&p)?;
-    let store: Store = serde_json::from_str(&content)?;
+    let data = fs::read(&p)?;
+    let store: Store = bincode::deserialize(&data).unwrap_or_default();
     Ok(store)
 }
 
@@ -43,8 +43,8 @@ pub fn save(store: &Store) -> Result<()> {
     if let Some(parent) = p.parent() {
         fs::create_dir_all(parent)?;
     }
-    let content = serde_json::to_string(store)?;
-    fs::write(&p, content)?;
+    let data = bincode::serialize(store)?;
+    fs::write(&p, data)?;
     Ok(())
 }
 
@@ -104,9 +104,5 @@ pub fn frecency(entry: &Entry) -> f64 {
 }
 
 pub fn score(store: &Store, path: &str) -> f64 {
-    store
-        .entries
-        .get(path)
-        .map(|e| frecency(e))
-        .unwrap_or(0.0)
+    store.entries.get(path).map(frecency).unwrap_or(0.0)
 }
