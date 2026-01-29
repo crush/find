@@ -73,19 +73,27 @@ pub fn run() -> Result<()> {
         return Ok(());
     }
 
-    eprintln!("indexing...");
+    use std::io::{stderr, Write};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    let counter = AtomicUsize::new(0);
 
     let directories: Vec<String> = config
         .roots
         .par_iter()
-        .flat_map(|root| scan(root))
+        .flat_map(|root| {
+            let dirs = scan(root);
+            let prev = counter.fetch_add(dirs.len(), Ordering::Relaxed);
+            eprint!("\r\x1b[Kindexed {}", prev + dirs.len());
+            let _ = stderr().flush();
+            dirs
+        })
         .collect();
 
     let cache = Cache { directories };
-    let count = cache.directories.len();
     save_cache(&cache)?;
 
-    eprintln!("indexed {count} directories");
+    eprintln!();
     Ok(())
 }
 
