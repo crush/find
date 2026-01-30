@@ -19,7 +19,15 @@ pub fn load() -> Result<Config> {
     let path = path();
 
     if !path.exists() {
-        let config = Config::default();
+        let home = dirs::home_dir().unwrap_or_default();
+        let defaults = ["Desktop", "Documents", "Downloads", "Pictures", "Movies", "Developer", "Projects"];
+        let roots: Vec<String> = defaults
+            .iter()
+            .map(|d| home.join(d))
+            .filter(|p| p.exists())
+            .map(|p| p.to_string_lossy().to_string())
+            .collect();
+        let config = Config { roots };
         save(&config)?;
         return Ok(config);
     }
