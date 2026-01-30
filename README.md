@@ -14,45 +14,35 @@
 
   f add ~/code      # add root
   f index           # index projects
-  f noro            # jump (fuzzy)
-  f top             # browse top dirs (scrollable)
-
-> bookmarks?
-
-  f mark work       # mark current dir
-  f work            # jump to bookmark
-  f marks           # list all
-  f unmark work     # remove
-
-> navigation?
-
-  fb                # jump to .git parent
-  fb src            # jump to parent matching "src"
-
-> import?
-
-  f import zoxide   # import from zoxide
-  f import z        # import from z
-
-> keys?
-
-  j/k or scroll     # navigate
-  tab               # toggle scores
-  enter             # select
-  esc               # cancel
+  f noro            # jump
+  f code rust       # multi-term search
+  f top             # show top directories
 
 > features?
 
-  ✓ nucleo fuzzy (6x faster)
-  ✓ frecency ranking
-  ✓ bookmarks
-  ✓ parent jump
-  ✓ import from zoxide/z
-  ✓ excludes current dir
-  ✓ mouse scroll
-  ✓ fish/bash/zsh
+  ✓ frecency ranking (frequency + recency)
+  ✓ multi-term search (f fo ba → /foo/bar)
+  ✓ auto-prune dead paths
+  ✓ learns from usage
+
+> keys?
+
+  j/k or arrows     # navigate
+  tab               # toggle path
+  enter             # select
+  esc/ctrl+c        # cancel
+
+> frecency?
+
+  score starts at 1, +1 per visit
+
+  multiplier based on recency:
+    last hour  → score × 4
+    last day   → score × 2
+    last week  → score ÷ 2
+    older      → score ÷ 4
 
 > stack?
 
-  rust · nucleo · crossterm · ignore
+  rust · crossterm · jwalk
 ```

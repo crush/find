@@ -1,11 +1,27 @@
 use crate::config;
 use anyhow::Result;
-use ignore::WalkBuilder;
+use jwalk::WalkDir;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicUsize, Ordering};
+
+const IGNORED: &[&str] = &[
+    "node_modules",
+    "target",
+    "dist",
+    "build",
+    "vendor",
+    "__pycache__",
+    ".git",
+    ".next",
+    ".turbo",
+    ".cache",
+    ".npm",
+    ".pnpm",
+    "coverage",
+    ".nyc_output",
+];
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Cache {
@@ -16,7 +32,7 @@ pub fn cache_path() -> PathBuf {
     dirs::cache_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("f")
-        .join("cache")
+        .join("cache.json")
 }
 
 pub fn load_cache() -> Result<Cache> {
@@ -26,8 +42,8 @@ pub fn load_cache() -> Result<Cache> {
         return Ok(Cache::default());
     }
 
-    let data = fs::read(&path)?;
-    let cache: Cache = bincode::deserialize(&data).unwrap_or_default();
+    let content = fs::read_to_string(&path)?;
+    let cache: Cache = serde_json::from_str(&content)?;
     Ok(cache)
 }
 
@@ -38,8 +54,8 @@ pub fn save_cache(cache: &Cache) -> Result<()> {
         fs::create_dir_all(parent)?;
     }
 
-    let data = bincode::serialize(cache)?;
-    fs::write(&path, data)?;
+    let content = serde_json::to_string_pretty(cache)?;
+    fs::write(&path, content)?;
     Ok(())
 }
 
@@ -51,11 +67,14 @@ pub fn run() -> Result<()> {
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_else(|| ".".to_string());
 
-        eprintln!("f add {home}");
+        eprintln!("no roots configured. add one with:");
+        eprintln!("  f add {home}");
+        eprintln!("  f add {home}/code");
         return Ok(());
     }
 
     use std::io::{stderr, Write};
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     let counter = AtomicUsize::new(0);
 
@@ -65,7 +84,7 @@ pub fn run() -> Result<()> {
         .flat_map(|root| {
             let dirs = scan(root);
             let prev = counter.fetch_add(dirs.len(), Ordering::Relaxed);
-            eprint!("\r\x1b[K{}", prev + dirs.len());
+            eprint!("\r\x1b[Kindexed {}", prev + dirs.len());
             let _ = stderr().flush();
             dirs
         })
@@ -81,26 +100,41 @@ pub fn run() -> Result<()> {
 fn scan(root: &str) -> Vec<String> {
     let mut dirs = Vec::new();
 
-    let walker = WalkBuilder::new(root)
-        .max_depth(Some(5))
-        .hidden(true)
-        .git_ignore(true)
-        .git_global(true)
-        .git_exclude(true)
-        .build();
-
-    for entry in walker.filter_map(|e| e.ok()) {
-        if !entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+    for entry in WalkDir::new(root)
+        .max_depth(5)
+        .skip_hidden(true)
+        .process_read_dir(|_, _, _, children| {
+            children.retain(|e| {
+                e.as_ref()
+                    .map(|entry| {
+                        let name = entry.file_name().to_str().unwrap_or("");
+                        !IGNORED.contains(&name)
+                    })
+                    .unwrap_or(false)
+            });
+        })
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
+        if !entry.file_type().is_dir() {
             continue;
         }
 
         let path = entry.path();
-        if is_project(path) {
+        if is_project(&path) {
             dirs.push(path.to_string_lossy().to_string());
         }
     }
 
-    dirs
+    dirs.sort_by(|a, b| a.len().cmp(&b.len()));
+    let mut result = Vec::new();
+    for dir in dirs {
+        let dominated = result.iter().any(|p: &String| dir.starts_with(&format!("{}/", p)));
+        if !dominated {
+            result.push(dir);
+        }
+    }
+    result
 }
 
 fn is_project(path: &std::path::Path) -> bool {
@@ -118,11 +152,6 @@ fn is_project(path: &std::path::Path) -> bool {
         "mix.exs",
         "deno.json",
         "bun.lockb",
-        "flake.nix",
-        "shell.nix",
-        "Project.toml",
-        "pubspec.yaml",
-        "Package.swift",
     ];
 
     markers.iter().any(|m| path.join(m).exists())
